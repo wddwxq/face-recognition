@@ -561,6 +561,7 @@ function startRecognitionExperiment() {
   const instructions = {
     type: jsPsychHtmlButtonResponse,
     stimulus: `<div class="page"><h2>Instructions</h2>
+      <p>Welcome to the experiment!</p>
       <p>The experiment lasts about <strong>15 minutes</strong>.</p>
       <p>Please use a desktop or laptop, and stay on this page throughout the task.</p>
       <p>You will see faces from four categories: Black female, Black male, White female,
@@ -582,7 +583,7 @@ function startRecognitionExperiment() {
       <p class="attention-note"><strong>Your bonus payment will depend on your overall performance,
       so please pay close attention while studying the faces and try your best on every test trial.</strong></p>
       </div>`,
-    choices: ["Begin studying the faces"],
+    choices: ["Begin"],
     data: { phase: "instructions" },
     on_finish: () => window.addEventListener("beforeunload", beforeUnload)
   };
@@ -604,10 +605,19 @@ function startRecognitionExperiment() {
   }));
   const retention = {
     type: jsPsychHtmlButtonResponse,
-    stimulus: `<div class="page"><h2>Please wait</h2>
+    stimulus: `<div class="page"><h2>Instructions</h2>
       <p id="retention-status">Please stay on this page. A Next button will appear after one minute.</p>
-      <p>In the next part, click <strong>Old</strong> if the face appeared during the study phase,
-      or <strong>New</strong> if it did not.</p>
+      <p>In the next part, you will see faces one at a time. Some faces appeared during the
+      study phase, and some are new faces that you have not seen during the study phase.
+      Faces from all four categories will be mixed together.</p>
+      <p>Look carefully at each face and decide whether you saw it during the study phase.
+      Click one of the two buttons below the face:</p>
+      <ul class="response-guide">
+        <li><strong>Old</strong> - the face was shown during the study phase.</li>
+        <li><strong>New</strong> - the face was not shown during the study phase.</li>
+      </ul>
+      <p>Respond as accurately as you can. If you are unsure, make your best guess.
+      You will not receive feedback on whether your responses are correct.</p>
       <p class="attention-note"><strong>Your bonus payment will depend on your overall performance.
       Please stay focused, look carefully at each face, and try your best on every trial.</strong></p></div>`,
     choices: ["Next"],
@@ -726,7 +736,7 @@ function startRecognitionExperiment() {
   const completed = {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: () => preview ? "<h2>Preview finished</h2><p>You can close this page.</p>" :
-      "<h2>Thank you!</h2><p>Your responses have been received. Redirecting to Prolific…</p>",
+      "<h2>Thank you!</h2><p>Thank you for participating in the experiment.</p><p>Your responses have been received. Redirecting to Prolific…</p>",
     choices: "NO_KEYS",
     trial_duration: 2000,
     data: { phase: "completion" }
