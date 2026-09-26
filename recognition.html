@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Face Recognition Study</title>
+  <link rel="stylesheet" href="jspsych/dist/jspsych.css">
+  <script src="jspsych/dist/jspsych.js"></script>
+  <script src="jspsych/dist/plugin-html-keyboard-response.js"></script>
+  <script src="jspsych/dist/plugin-html-button-response.js"></script>
+  <script src="jspsych/dist/plugin-image-keyboard-response.js"></script>
+  <script src="jspsych/dist/plugin-image-button-response.js"></script>
+  <script src="jspsych/dist/plugin-preload.js"></script>
+  <script src="jspsych/dist/plugin-fullscreen.js"></script>
+  <script src="jspsych/dist/plugin-survey-html-form.js"></script>
+  <script src="jspsych/dist/plugin-call-function.js"></script>
+  <style>
+    :root {
+      --ink: #243247;
+      --muted: #647184;
+      --accent: #264f63;
+      --accent-hover: #193b4d;
+      --line: #dce3e9;
+      --paper: #ffffff;
+      --wash: #f3f6f8;
+    }
+    * { box-sizing: border-box; }
+    body { background: var(--paper); color: var(--ink); margin: 0; }
+    .jspsych-display-element {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 17px;
+      line-height: 1.7;
+      color: var(--ink);
+      background: var(--paper);
+      -webkit-font-smoothing: antialiased;
+    }
+    .jspsych-content-wrapper { padding: 32px 0; }
+    .jspsych-content { max-width: 840px; width: calc(100% - 48px); margin: auto; }
+    h1, h2 {
+      color: #1d3046;
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 400;
+      font-size: clamp(28px, 3.5vw, 36px);
+      line-height: 1.25;
+      letter-spacing: -0.6px;
+      margin: 0 0 24px;
+    }
+    p { margin: 0 0 18px; }
+    strong { font-weight: 650; }
+    a { color: var(--accent); text-underline-offset: 3px; }
+    a:hover { color: var(--accent-hover); }
+    .center { text-align: center; }
+    .page {
+      text-align: left;
+      padding: clamp(24px, 4vw, 48px);
+      border: 1px solid var(--line);
+      border-top: 3px solid var(--accent);
+      border-radius: 12px;
+      background: var(--paper);
+      box-shadow: 0 8px 32px rgba(29, 48, 70, 0.045);
+      margin-bottom: 24px;
+    }
+    .page h2 { margin-bottom: 28px; }
+    .page p:last-child { margin-bottom: 0; }
+    .page p:has(kbd) {
+      background: var(--wash);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px 20px;
+      line-height: 2.35;
+    }
+    /* Stimulus appearance and size remain unchanged; no image effects or transitions. */
+    #jspsych-image-keyboard-response-stimulus,
+    #jspsych-image-button-response-stimulus {
+      max-width: 85vw;
+      max-height: 65vh;
+      object-fit: contain;
+    }
+    .keys {
+      display: inline-block;
+      margin-top: 24px;
+      padding: 12px 24px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fafbfc;
+      font-size: 18px;
+      color: var(--ink);
+    }
+    .counter {
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      font-variant-numeric: tabular-nums;
+      margin: 16px 0 0;
+    }
+    kbd {
+      display: inline-block;
+      min-width: 34px;
+      padding: 2px 9px;
+      margin-right: 4px;
+      border: 1px solid #ccd5dd;
+      border-bottom-width: 3px;
+      border-radius: 6px;
+      background: var(--paper);
+      color: #213e51;
+      font: 600 15px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      text-align: center;
+      vertical-align: middle;
+    }
+    button, input { font: inherit; }
+    .jspsych-btn, .consent-button {
+      min-height: 48px;
+      padding: 12px 24px;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font: 600 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      cursor: pointer;
+      white-space: normal;
+      box-shadow: none;
+    }
+    .jspsych-btn:hover, .consent-button:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+      color: #fff;
+    }
+    .jspsych-btn:disabled { opacity: 0.5; cursor: default; }
+    :is(button, input, a):focus-visible { outline: 3px solid #75a9c0; outline-offset: 4px; }
+    input:not([type="submit"]):not([type="button"]) {
+      max-width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #bcc8d2;
+      border-radius: 8px;
+      color: var(--ink);
+      background: #fff;
+    }
+    #jspsych-loading-progress-bar-container {
+      border: 0;
+      border-radius: 8px;
+      background: #e7edf1;
+      overflow: hidden;
+    }
+    #jspsych-loading-progress-bar { background: var(--accent); }
+    #preview-label {
+      position: fixed;
+      top: 10px;
+      left: 12px;
+      padding: 4px 10px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #fff;
+      font-size: 11px;
+      color: var(--muted);
+      z-index: 10;
+    }
+    /* Consent wording and markup are preserved. */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      background: #edf2f5;
+      z-index: 1000;
+    }
+    .modal-content {
+      width: 100%;
+      max-width: 880px;
+      max-height: calc(100vh - 48px);
+      max-height: calc(100dvh - 48px);
+      overflow-y: auto;
+      padding: 36px 48px 28px;
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--accent);
+      border-radius: 14px;
+      background: var(--paper);
+      box-shadow: 0 16px 56px rgba(29, 48, 70, 0.09);
+      scrollbar-color: #bdcbd4 transparent;
+      scrollbar-width: thin;
+    }
+    .modal-content h2 { text-align: left !important; margin-bottom: 26px !important; }
+    .consent-text { margin-bottom: 28px; line-height: 1.75; text-align: left; font-size: 15px; }
+    .consent-text p { margin: 0 0 18px; }
+    .consent-text p:first-child {
+      display: inline-block;
+      padding: 5px 10px;
+      margin-bottom: 24px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: var(--wash);
+      color: #536478;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+    .consent-buttons {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .consent-button { min-width: 164px; margin: 0; }
+    .disagree-button { background: #fff; border-color: #bbc8d2; color: #3e5368; }
+    .disagree-button:hover { background: var(--wash); border-color: #8c9eac; color: #243247; }
+    .modal-content > div:last-child p {
+      font-size: 12px !important;
+      line-height: 1.6;
+      color: var(--muted) !important;
+    }
+    .modal-content > div:last-child a { color: var(--accent) !important; }
+    @media (max-width: 600px) {
+      .jspsych-content-wrapper { padding: 20px 0; }
+      .jspsych-content { width: calc(100% - 28px); }
+      .jspsych-display-element { font-size: 16px; }
+      .modal-overlay { padding: 12px; }
+      .modal-content {
+        padding: 26px 22px 22px;
+        max-height: calc(100vh - 24px);
+        max-height: calc(100dvh - 24px);
+      }
+      .consent-button { flex: 1 1 150px; }
+      .keys { font-size: 16px; padding: 10px 16px; }
+    }
+    .jspsych-image-button-response-button .jspsych-btn { min-width: 140px; }
+    .attention-note {
+      padding: 16px 20px;
+      border-left: 3px solid var(--accent);
+      border-radius: 0 6px 6px 0;
+      background: var(--wash);
+    }
+    .response-guide { padding-left: 24px; }
+    .response-guide li { margin: 10px 0; }
+    /* One progress bar per phase, without exposing trial counts. */
+    #jspsych-progressbar-container {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      padding: 12px 24px 16px;
+      margin: 0;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      font: 500 12px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      z-index: 20;
+    }
+    #jspsych-progressbar-outer {
+      width: min(560px, 100%);
+      height: 6px;
+      display: block;
+      margin: 0;
+      border: 0;
+      border-radius: 6px;
+      background: #e7edf1;
+      overflow: hidden;
+    }
+    #jspsych-progressbar-inner {
+      height: 100%;
+      border-radius: 6px;
+      background: var(--accent);
+      transition: none;
+    }
+  </style>
+</head>
+<body><noscript>This study requires JavaScript. Please enable JavaScript and reopen the study.</noscript>
+<script>
+/* Face recognition, jsPsych 7.3.1. See recognition-README.md for deployment. */
+"use strict";
+
+const RECOGNITION_CONFIG = Object.freeze({
+  version: "1.4.0",
+  oldPerCategory: 18,
+  newPerCategory: 18,
+  studyDurationMs: 2000,
+  gapMs: 500,
+  retentionMs: 60000,
+  minimumSaveDisplayMs: 5000,
+  fastResponseThresholdMs: 300,
+  fastWarningReadMs: 2000,
+  // Copied from experiment.html. Set these for the new Prolific/DataPipe study.
+  dataPipeExperimentId: "o2zwspsz9kI7",
+  completionUrl: "https://app.prolific.com/submissions/complete?cc=C1GSBSUS"
+});
+
+// Global face IDs follow the similarity/MDS face_number_key.csv (1–158).
+// See the local lookup CSV for original CFD identities and renamed filenames.
+const RECOGNITION_FACE_IDS = [
+        "BF-001", "BF-002", "BF-003", "BF-004", "BF-005", "BF-006", "BF-007", "BF-008", "BF-009", "BF-010",
+        "BF-011", "BF-012", "BF-013", "BF-014", "BF-015", "BF-016", "BF-017", "BF-018", "BF-019", "BF-020",
+        "BF-021", "BF-022", "BF-023", "BF-024", "BF-025", "BF-026", "BF-027", "BF-028", "BF-029", "BF-030",
+        "BF-031", "BF-032", "BF-033", "BF-034", "BF-035", "BF-036", "BF-037", "BF-038", "BF-039", "BF-040",
+        "BF-041", "BF-042", "BF-043", "BF-044", "BF-045", "BF-046", "BF-047", "BF-048",
+        "BM-049", "BM-050", "BM-051", "BM-052", "BM-053", "BM-054", "BM-055", "BM-056", "BM-057", "BM-058",
+        "BM-059", "BM-060", "BM-061", "BM-062", "BM-063", "BM-064", "BM-065", "BM-066", "BM-067", "BM-068",
+        "BM-069", "BM-070", "BM-071", "BM-072", "BM-073", "BM-074", "BM-075", "BM-076", "BM-077", "BM-078",
+        "BM-079", "BM-080", "BM-081", "BM-082", "BM-083", "BM-084", "BM-085",
+        "WF-086", "WF-087", "WF-088", "WF-089", "WF-090", "WF-091", "WF-092", "WF-093", "WF-094", "WF-095",
+        "WF-096", "WF-097", "WF-098", "WF-099", "WF-100", "WF-101", "WF-102", "WF-103", "WF-104", "WF-105",
+        "WF-106", "WF-107", "WF-108", "WF-109", "WF-110", "WF-111", "WF-112", "WF-113", "WF-114", "WF-115",
+        "WF-116", "WF-117", "WF-118", "WF-119", "WF-120", "WF-121", "WF-122",
+        "WM-123", "WM-124", "WM-125", "WM-126", "WM-127", "WM-128", "WM-129", "WM-130", "WM-131", "WM-132",
+        "WM-133", "WM-134", "WM-135", "WM-136", "WM-137", "WM-138", "WM-139", "WM-140", "WM-141", "WM-142",
+        "WM-143", "WM-144", "WM-145", "WM-146", "WM-147", "WM-148", "WM-149", "WM-150", "WM-151", "WM-152",
+        "WM-153", "WM-154", "WM-155", "WM-156", "WM-157", "WM-158"
+];
+const RECOGNITION_CATEGORIES = ["BF", "BM", "WF", "WM"];
+const RECOGNITION_CATEGORY_CODES = Object.freeze({ BF: 1, BM: 2, WF: 3, WM: 4 });
+
+function shuffledCopy(items, random = Math.random) {
+  const result = items.slice();
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+function buildRecognitionPlan(ids, config, random = Math.random) {
+  if (new Set(ids).size !== ids.length) throw new Error("Duplicate face identities.");
+  if (![config.oldPerCategory, config.newPerCategory].every(n => Number.isInteger(n) && n > 0)) {
+    throw new Error("Face counts must be positive integers.");
+  }
+  const selected = [];
+  for (const category of RECOGNITION_CATEGORIES) {
+    const pool = ids.filter(id => id.startsWith(category + "-"));
+    const total = config.oldPerCategory + config.newPerCategory;
+    if (pool.length < total) throw new Error("Insufficient faces in " + category);
+    shuffledCopy(pool, random).slice(0, total).forEach((id, index) => {
+      selected.push({
+        face_id: Number(id.split("-")[1]),
+        image_path: "faces/" + id + ".jpg",
+        category: RECOGNITION_CATEGORY_CODES[category],
+        is_old: index < config.oldPerCategory
+      });
+    });
+  }
+  const study = shuffledCopy(selected.filter(face => face.is_old), random);
+  study.forEach((face, index) => { face.study_position = index + 1; });
+  selected.filter(face => !face.is_old).forEach(face => { face.study_position = null; });
+  const test = shuffledCopy(selected, random);
+  test.forEach((face, index) => { face.test_position = index + 1; });
+  return { study, test };
+}
+
+function scoreRecognition(response, isOld) {
+  // jsPsych image-button-response records the zero-based button index.
+  const saidOld = response === 0;
+  const valid = response === 0 || response === 1;
+  return {
+    response_label: valid ? (saidOld ? "old" : "new") : null,
+    correct: valid ? saidOld === isOld : null,
+    outcome: !valid ? "missing" : isOld ? (saidOld ? "hit" : "miss") : (saidOld ? "false_alarm" : "correct_rejection")
+  };
+}
+
+// Export only image trials. Internal jsPsych button indices are recoded here:
+// raw 0 (Old) -> exported 1; raw 1 (New) -> exported 0.
+function exportRecognitionCSV(rows, prolificId) {
+  const columns = ["prolific_id", "phase", "trial", "category", "face_id",
+    "old", "response", "correct", "rt", "fast_response"];
+  const csvCell = value => {
+    const text = value == null ? "" : String(value);
+    return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+  };
+  const output = [columns];
+  for (const row of rows) {
+    if (row.phase !== "study" && row.phase !== "test") continue;
+    const test = row.phase === "test";
+    const response = test && (row.response === 0 || row.response === 1)
+      ? (row.response === 0 ? 1 : 0) : "";
+    output.push([
+      prolificId, test ? 2 : 1, test ? row.test_position : row.study_position,
+      row.category, row.face_id, Number(row.is_old), response,
+      test && typeof row.correct === "boolean" ? Number(row.correct) : "",
+      test && Number.isFinite(row.rt) ? row.rt : "",
+      test && typeof row.fast_response === "boolean" ? Number(row.fast_response) : ""
+    ]);
+  }
+  return output.map(row => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
+}
+
+// Use the documented DataPipe endpoint directly so success, queued uploads, and
+// errors can be handled explicitly without an unversioned external plugin.
+async function uploadRecognitionCSV(experimentID, filename, csv, fetchImpl = fetch) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 65000);
+  try {
+    const response = await fetchImpl("https://pipe.jspsych.org/api/data/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ experimentID, filename, data: csv }),
+      signal: controller.signal
+    });
+    const result = await response.json();
+    if (!response.ok || result.error) {
+      throw new Error(result.error || "HTTP " + response.status);
+    }
+    if (![200, 201, 202].includes(response.status)) throw new Error("Unexpected upload response.");
+    return { status: response.status, queued: response.status === 202 };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function startRecognitionExperiment() {
+  const params = new URLSearchParams(window.location.search);
+  const preview = params.get("preview") === "1";
+  const quick = preview && params.get("quick") === "1";
+  const config = { ...RECOGNITION_CONFIG };
+  // Retention remains at least one minute, including in quick preview.
+  if (quick) Object.assign(config, { studyDurationMs: 20, gapMs: 5 });
+  const runId = crypto.randomUUID();
+  let prolificId = (params.get("PROLIFIC_PID") || "").trim();
+  if (preview && !prolificId) prolificId = "preview";
+  const seed = preview && params.get("seed") ? params.get("seed") : runId;
+  let consented = false;
+  let saved = false;
+  let fastWarningPending = false;
+  let fastWarningCount = 0;
+  let fastWarningTriggerPosition = null;
+  let studyEndTime = null;
+  let uploadCSV = null;
+  let uploadFilename = null;
+  const beforeUnload = event => { event.preventDefault(); event.returnValue = ""; };
+
+  const jsPsych = initJsPsych({
+    use_webaudio: false,
+    show_progress_bar: true,
+    auto_update_progress_bar: false,
+    message_progress_bar: "",
+    on_trial_start: trial => {
+      const phase = trial.data && trial.data.phase;
+      if (phase === "study") {
+        setPhaseProgress("study", trial.data.study_position - 1, plan.study.length);
+      } else if (phase === "test") {
+        setPhaseProgress("test", trial.data.test_position - 1, plan.test.length);
+      } else {
+        const bar = document.getElementById("jspsych-progressbar-container");
+        if (bar) bar.style.display = "none";
+      }
+    },
+    on_finish: () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+      if (consented && saved && !preview) window.location.assign(config.completionUrl);
+    }
+  });
+  function setPhaseProgress(phase, completed, total) {
+    const bar = document.getElementById("jspsych-progressbar-container");
+    if (!bar) return;
+    const label = phase === "study" ? "Study progress" : "Trial progress";
+    bar.style.display = "flex";
+    bar.querySelector("span").textContent = label;
+    const track = document.getElementById("jspsych-progressbar-outer");
+    track.setAttribute("role", "progressbar");
+    track.setAttribute("aria-label", label);
+    track.setAttribute("aria-valuemin", "0");
+    track.setAttribute("aria-valuemax", "100");
+    track.setAttribute("aria-valuenow", String(Math.round(100 * completed / total)));
+    jsPsych.setProgressBar(completed / total);
+  }
+  jsPsych.randomization.setSeed(seed);
+  const plan = buildRecognitionPlan(RECOGNITION_FACE_IDS, config);
+  jsPsych.data.addProperties({
+    experiment: "face_old_new_recognition",
+    experiment_version: config.version,
+    prolific_id: prolificId,
+    prolific_study_id: params.get("STUDY_ID") || "",
+    prolific_session_id: params.get("SESSION_ID") || "",
+    run_id: runId,
+    random_seed: seed,
+    preview: preview,
+    quick_preview: quick,
+    response_mode: "button",
+    fast_response_threshold_ms: config.fastResponseThresholdMs,
+    old_button_index: 0,
+    new_button_index: 1,
+    old_per_category: config.oldPerCategory,
+    new_per_category: config.newPerCategory,
+    study_duration_ms: config.studyDurationMs,
+    gap_ms: config.gapMs,
+    retention_ms: config.retentionMs,
+    started_at_utc: new Date().toISOString()
+  });
+  if (preview) {
+    const label = document.createElement("div");
+    label.id = "preview-label";
+    label.textContent = quick ? "QUICK PREVIEW — shortened timings; no upload" : "PREVIEW — no upload or Prolific redirect";
+    document.body.appendChild(label);
+  }
+
+  const consent = {
+    type: jsPsychHtmlButtonResponse,
+    data: { phase: "consent" },
+    stimulus: `
+            <div class="modal-overlay">
+                <div class="modal-content">
+                    <h2 style="text-align: center; margin-bottom: 20px;">Study Consent Form</h2>
+                    <div class="consent-text">
+                        <p><strong>Study IRB #: 21800</strong></p>
+                        <p><strong>You are being asked to participate in a research study.</strong> Scientists do research to answer important questions which might help change or improve the way we do things in the future. This form will give you information about the study to help you decide whether you want to participate.</p>
+                        <p><strong>All research is voluntary.</strong> You may choose not to take part in this study. If you decide to participate, you can change your mind later and leave the study at any time.</p>
+                        <p><strong>The purpose of this study</strong> is to understand how people process visual information.</p>
+                        <p>This study is being conducted by Dr. R.M. Nosofsky, Indiana University / Psychological and Brain Sciences.</p>
+                        <p><strong>If you agree to be in the study, you will do the following things.</strong> You will view facial images and answer questions about them. The study lasts approximately 15 minutes.</p>
+                        <p><strong>Before agreeing to participate, please consider the risks and potential benefits of taking part in this study.</strong> There are no known risks. There is a risk someone outside the study team could get access to your research information. We do not record your name or personal contact information.</p>
+                        <p><strong>You will be paid for participating in this study. You will earn $3 plus a possible bonus of $2 for good performance.</strong> However, you will not receive the compensation if you decide not to participate or choose to leave the study later.</p>
+                        <p><strong>If you have questions about the study,</strong> contact Dr. R.M. Nosofsky at <a href="mailto:nosofsky@iu.edu">nosofsky@iu.edu</a>.</p>
+                        <p>For questions about your rights as a research participant, contact the IU Human Research Protection Program office at 800-696-2949 or irb@iu.edu.</p>
+                        <p><strong>Statement of Age of Participant and Consent:</strong> By clicking "I Agree" you indicate that you are at least 18 years of age, the research has been explained to you, your questions have been fully answered, and you freely and voluntarily choose to participate.</p>
+                    </div>
+                    <div class="consent-buttons">
+                        <button class="consent-button agree-button">I Agree</button>
+                        <button class="consent-button disagree-button">I Do Not Agree</button>
+                    </div>
+                    <div style="margin-top: 20px; text-align: center;">
+                        <p style="font-size: 9px; color: #666; margin: 0;">
+                            You can read about how we handle your data and protect your privacy
+                            <a href="https://noslab.lab.indiana.edu/privacy/" target="_blank" rel="noopener noreferrer" style="color: #666;">here</a>.
+                        </p>
+                    </div>
+                </div>
+            </div>`,
+    choices: ['Continue'],
+    button_html: '<button style="display: none;" class="jspsych-btn">%choice%</button>',
+    on_load: function() {
+      const consentStart = performance.now();
+      document.querySelector('.agree-button').addEventListener('click', function() {
+        document.querySelector('.jspsych-btn').click();
+      });
+      document.querySelector('.disagree-button').addEventListener('click', function() {
+        jsPsych.finishTrial({ response: 1, rt: performance.now() - consentStart });
+      });
+    },
+    on_finish: data => {
+      consented = data.response === 0;
+      data.consented = consented;
+    }
+  };
+  const idEntry = {
+    timeline: [{
+      type: jsPsychSurveyHtmlForm,
+      preamble: "<h2>Prolific ID</h2><p>Please enter your 24-character Prolific ID.</p>",
+      html: '<p><input name="prolific_id" aria-label="Prolific ID" required pattern="[a-fA-F0-9]{24}" maxlength="24"></p>',
+      data: { phase: "participant_id" },
+      on_finish: data => {
+        prolificId = data.response.prolific_id.trim();
+        jsPsych.data.addProperties({ prolific_id: prolificId });
+      }
+    }],
+    conditional_function: () => !preview && !/^[a-fA-F0-9]{24}$/.test(prolificId)
+  };
+  const instructions = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `<div class="page"><h2>Instructions</h2>
+      <p>The experiment lasts about <strong>15 minutes</strong>.</p>
+      <p>Please use a desktop or laptop, and stay on this page throughout the task.</p>
+      <p>You will see faces from four categories: Black female, Black male, White female,
+      and White male. Faces from these categories will be mixed together.</p>
+      <p>First, you will see some faces, one at a time. Look carefully and try to remember
+      what each face looks like.
+      Each face will appear for ${config.studyDurationMs / 1000} seconds.
+      You do not need to respond during this part.</p>
+      <p>Next, there will be a waiting period of one minute.</p>
+      <p>Then you will see some faces. Some are old faces that appeared during the study phase,
+      and some are new faces that you have not seen during the study phase.
+      For each face, click one of the two buttons:</p>
+      <ul class="response-guide">
+        <li><strong>Old</strong> - shown during the study phase.</li>
+        <li><strong>New</strong> - not shown during the study phase.</li>
+      </ul>
+      <p>Respond as accurately as you can. If unsure, make your best guess.
+      You will not receive feedback on your responses.</p>
+      <p class="attention-note"><strong>Your bonus payment will depend on your overall performance,
+      so please pay close attention while studying the faces and try your best on every test trial.</strong></p>
+      </div>`,
+    choices: ["Begin studying the faces"],
+    data: { phase: "instructions" },
+    on_finish: () => window.addEventListener("beforeunload", beforeUnload)
+  };
+  const studyTrials = plan.study.map((face, index) => ({
+    type: jsPsychImageKeyboardResponse,
+    stimulus: face.image_path,
+    stimulus_height: 420,
+    render_on_canvas: false,
+    choices: "NO_KEYS",
+    trial_duration: config.studyDurationMs,
+    // The retention interval starts at the last study image's offset.
+    post_trial_gap: index === plan.study.length - 1 ? 0 : config.gapMs,
+    data: { ...face, phase: "study" },
+    on_finish: data => {
+      data.image_offset_elapsed_ms = performance.now();
+      if (index === plan.study.length - 1) studyEndTime = performance.now();
+      setPhaseProgress("study", index + 1, plan.study.length);
+    }
+  }));
+  const retention = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `<div class="page"><h2>Please wait</h2>
+      <p id="retention-status">Please stay on this page. A Next button will appear after one minute.</p>
+      <p>In the next part, click <strong>Old</strong> if the face appeared during the study phase,
+      or <strong>New</strong> if it did not.</p>
+      <p class="attention-note"><strong>Your bonus payment will depend on your overall performance.
+      Please stay focused, look carefully at each face, and try your best on every trial.</strong></p></div>`,
+    choices: ["Next"],
+    button_html: '<button id="retention-next" class="jspsych-btn" style="display: none;" disabled>%choice%</button>',
+    data: { phase: "retention", minimum_retention_ms: config.retentionMs },
+    on_load: () => {
+      // No automatic advance: show an enabled Next button after the full delay.
+      jsPsych.pluginAPI.setTimeout(() => {
+        const next = document.getElementById("retention-next");
+        next.disabled = false;
+        next.style.display = "inline-block";
+        document.getElementById("retention-status").textContent =
+          "The waiting period is complete. Click Next when you are ready to begin the recognition test.";
+      }, config.retentionMs);
+    }
+  };
+  const testTrials = plan.test.map((face, index) => ({
+    type: jsPsychImageButtonResponse,
+    stimulus: face.image_path,
+    stimulus_height: 420,
+    render_on_canvas: false,
+    choices: ["Old", "New"],
+    margin_vertical: "20px",
+    margin_horizontal: "10px",
+    response_ends_trial: true,
+    post_trial_gap: config.gapMs,
+    data: {
+      ...face, phase: "test",
+      correct_response: face.is_old ? 0 : 1,
+      correct_response_label: face.is_old ? "old" : "new"
+    },
+    on_load: () => { if (index === 0) jsPsych.data.addProperties({ actual_retention_ms: performance.now() - studyEndTime }); },
+    on_finish: data => {
+      Object.assign(data, scoreRecognition(data.response, face.is_old));
+      data.fast_response = Number.isFinite(data.rt) && data.rt < config.fastResponseThresholdMs;
+      // Keep the original response and RT. This is a reminder, not an exclusion
+      // or an automatic bonus decision. Check every response independently.
+      fastWarningPending = data.fast_response;
+      if (fastWarningPending) fastWarningTriggerPosition = index + 1;
+      setPhaseProgress("test", index + 1, plan.test.length);
+    }
+  }));
+
+  const fastResponseWarning = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `<div class="page"><h2>Please slow down</h2>
+      <p>Your response was very quick. Please take time to look carefully at each face
+      before deciding whether it is Old or New.</p>
+      <p>Respond as accurately as you can. Your bonus depends on your overall performance,
+      so please stay focused and try your best.</p></div>`,
+    choices: ["Continue"],
+    button_html: '<button id="fast-warning-continue" class="jspsych-btn" disabled>%choice%</button>',
+    post_trial_gap: config.gapMs,
+    data: { phase: "fast_response_warning" },
+    on_load: () => {
+      fastWarningCount++;
+      setPhaseProgress("test", fastWarningTriggerPosition, plan.test.length);
+      // A brief pause keeps a run of clicks from dismissing the reminder unseen.
+      jsPsych.pluginAPI.setTimeout(() => {
+        document.getElementById("fast-warning-continue").disabled = false;
+      }, config.fastWarningReadMs);
+    },
+    on_finish: data => {
+      data.triggering_test_position = fastWarningTriggerPosition;
+      data.warning_number = fastWarningCount;
+      fastWarningPending = false;
+    }
+  };
+  const testTimeline = testTrials.flatMap(trial => [
+    trial,
+    { timeline: [fastResponseWarning], conditional_function: () => fastWarningPending }
+  ]);
+
+  const saveTrial = {
+    type: jsPsychCallFunction,
+    async: true,
+    data: { phase: "save" },
+    func: done => {
+      jsPsych.data.addProperties({
+        completed_at_utc: new Date().toISOString(),
+        task_completed: true,
+        fast_warning_count: fastWarningCount
+      });
+      uploadCSV = exportRecognitionCSV(jsPsych.data.get().values(), prolificId);
+      const safeId = prolificId.replace(/[^a-zA-Z0-9_-]/g, "_");
+      uploadFilename = `${safeId}.csv`;
+      const display = jsPsych.getDisplayElement();
+      if (preview) {
+        display.innerHTML = '<h2>Preview complete</h2><p>No data were uploaded. No Prolific redirect will occur.</p><button class="jspsych-btn" id="finish">Finish preview</button>';
+        display.querySelector("#finish").onclick = () => done({ preview: true });
+        return;
+      }
+      const attempt = async () => {
+        display.innerHTML = "<h2>Saving your responses…</h2><p>Please keep this page open while we finish saving.</p>";
+        // Keep this screen visible for five seconds, and longer if the upload
+        // has not returned yet. A delay alone is not evidence of a saved file.
+        const minimumDisplay = new Promise(resolve => setTimeout(resolve, config.minimumSaveDisplayMs));
+        try {
+          const result = await uploadRecognitionCSV(config.dataPipeExperimentId, uploadFilename, uploadCSV);
+          await minimumDisplay;
+          saved = true;
+          window.removeEventListener("beforeunload", beforeUnload);
+          done(result);
+        } catch (error) {
+          await minimumDisplay;
+          // Keep technical information in the developer console only. Never
+          // offer participant data downloads or mark an unconfirmed upload saved.
+          console.error("DataPipe upload could not be confirmed:", error);
+          display.innerHTML = '<h2>Please keep this page open</h2><p>We could not finish saving your responses. Please click Retry to try again.</p><p>If this continues, contact the researcher through Prolific. Please do not refresh or close this page.</p><button class="jspsych-btn" id="retry">Retry</button>';
+          display.querySelector("#retry").onclick = attempt;
+        }
+      };
+      attempt();
+    }
+  };
+  const completed = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: () => preview ? "<h2>Preview finished</h2><p>You can close this page.</p>" :
+      "<h2>Thank you!</h2><p>Your responses have been received. Redirecting to Prolific…</p>",
+    choices: "NO_KEYS",
+    trial_duration: 2000,
+    data: { phase: "completion" }
+  };
+  jsPsych.run([
+    consent,
+    {
+      timeline: [idEntry, {
+        type: jsPsychPreload,
+        images: plan.test.map(face => face.image_path),
+        show_progress_bar: true,
+        continue_after_error: false,
+        max_load_time: 60000,
+        error_message: "<p>Some images could not load. Please check your connection and reload before starting. If this continues, contact the researcher through Prolific.</p>",
+        data: { phase: "preload" }
+      }, {
+        type: jsPsychFullscreen,
+        fullscreen_mode: true,
+        message: "<p>Please switch to fullscreen for the study.</p>",
+        data: { phase: "fullscreen_enter" }
+      }, instructions, ...studyTrials, retention, ...testTimeline, saveTrial, {
+        type: jsPsychFullscreen,
+        fullscreen_mode: false,
+        data: { phase: "fullscreen_exit" }
+      }, completed],
+      conditional_function: () => consented
+    },
+    {
+      timeline: [{
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '<h2>You have not consented</h2><p>No task responses have been uploaded. You may close this page and return the study in Prolific.</p><p><a href="https://app.prolific.com/">Return to Prolific</a></p>',
+        choices: "NO_KEYS",
+        data: { phase: "declined" }
+      }],
+      conditional_function: () => !consented
+    }
+  ]);
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { RECOGNITION_CONFIG, RECOGNITION_FACE_IDS, buildRecognitionPlan, scoreRecognition, exportRecognitionCSV, uploadRecognitionCSV };
+} else {
+  startRecognitionExperiment();
+}
+</script>
+</body>
+</html>
