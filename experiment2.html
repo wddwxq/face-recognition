@@ -580,9 +580,10 @@ function startDistinctivenessStudy() {
         return;
       }
       const csv = exportRatingsCSV(jsPsych.data.get().values(), sonaId, runId);
-      // A fresh run_id prevents duplicate filenames when piloting with one ID.
-      // sona_id remains a separate column for matching participants in SONA.
-      const filename = `${sonaId}_${runId}.csv`;
+      // Use eight random hexadecimal characters for a short session suffix.
+      // Keep the full run_id and sona_id in separate CSV columns.
+      const filenameSuffix = runId.replace(/-/g, "").slice(0, 8);
+      const filename = `${sonaId}_${filenameSuffix}.csv`;
       let uploading = false;
       const attempt = async () => {
         if (uploading) return;
