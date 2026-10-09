@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Face Distinctiveness Study</title>
+  <link rel="stylesheet" href="jspsych/dist/jspsych.css">
+  <script src="jspsych/dist/jspsych.js"></script>
+  <script src="jspsych/dist/plugin-html-keyboard-response.js"></script>
+  <script src="jspsych/dist/plugin-html-button-response.js"></script>
+  <script src="jspsych/dist/plugin-image-button-response.js"></script>
+  <script src="jspsych/dist/plugin-preload.js"></script>
+  <script src="jspsych/dist/plugin-fullscreen.js"></script>
+  <script src="jspsych/dist/plugin-call-function.js"></script>
+  <style>
+    :root {
+      --ink: #243247;
+      --muted: #647184;
+      --accent: #264f63;
+      --accent-hover: #193b4d;
+      --line: #dce3e9;
+      --paper: #ffffff;
+      --wash: #f3f6f8;
+    }
+    * { box-sizing: border-box; }
+    body { background: var(--paper); color: var(--ink); margin: 0; }
+    .jspsych-display-element {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 17px;
+      line-height: 1.7;
+      color: var(--ink);
+      background: var(--paper);
+      -webkit-font-smoothing: antialiased;
+    }
+    .jspsych-content-wrapper { padding: 32px 0; }
+    .jspsych-content { max-width: 840px; width: calc(100% - 48px); margin: auto; }
+    h1, h2 {
+      color: #1d3046;
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 400;
+      font-size: clamp(28px, 3.5vw, 36px);
+      line-height: 1.25;
+      letter-spacing: -0.6px;
+      margin: 0 0 24px;
+    }
+    p { margin: 0 0 18px; }
+    strong { font-weight: 650; }
+    a { color: var(--accent); text-underline-offset: 3px; }
+    a:hover { color: var(--accent-hover); }
+    .center { text-align: center; }
+    .page {
+      text-align: left;
+      padding: clamp(24px, 4vw, 48px);
+      border: 1px solid var(--line);
+      border-top: 3px solid var(--accent);
+      border-radius: 12px;
+      background: var(--paper);
+      box-shadow: 0 8px 32px rgba(29, 48, 70, 0.045);
+      margin-bottom: 24px;
+    }
+    .page h2 { margin-bottom: 28px; }
+    .page p:last-child { margin-bottom: 0; }
+    .page p:has(kbd) {
+      background: var(--wash);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px 20px;
+      line-height: 2.35;
+    }
+    /* Display face images without filters or transitions. */
+    #jspsych-image-keyboard-response-stimulus,
+    #jspsych-image-button-response-stimulus {
+      max-width: 85vw;
+      max-height: 65vh;
+      object-fit: contain;
+    }
+    .keys {
+      display: inline-block;
+      margin-top: 24px;
+      padding: 12px 24px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fafbfc;
+      font-size: 18px;
+      color: var(--ink);
+    }
+    .counter {
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      font-variant-numeric: tabular-nums;
+      margin: 16px 0 0;
+    }
+    kbd {
+      display: inline-block;
+      min-width: 34px;
+      padding: 2px 9px;
+      margin-right: 4px;
+      border: 1px solid #ccd5dd;
+      border-bottom-width: 3px;
+      border-radius: 6px;
+      background: var(--paper);
+      color: #213e51;
+      font: 600 15px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      text-align: center;
+      vertical-align: middle;
+    }
+    button, input { font: inherit; }
+    .jspsych-btn, .consent-button {
+      min-height: 48px;
+      padding: 12px 24px;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font: 600 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      cursor: pointer;
+      white-space: normal;
+      box-shadow: none;
+    }
+    .jspsych-btn:hover, .consent-button:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+      color: #fff;
+    }
+    .jspsych-btn:disabled { opacity: 0.5; cursor: default; }
+    :is(button, input, a):focus-visible { outline: 3px solid #75a9c0; outline-offset: 4px; }
+    input:not([type="submit"]):not([type="button"]) {
+      max-width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #bcc8d2;
+      border-radius: 8px;
+      color: var(--ink);
+      background: #fff;
+    }
+    #jspsych-loading-progress-bar-container {
+      border: 0;
+      border-radius: 8px;
+      background: #e7edf1;
+      overflow: hidden;
+    }
+    #jspsych-loading-progress-bar { background: var(--accent); }
+    #preview-label {
+      position: fixed;
+      top: 10px;
+      left: 12px;
+      padding: 4px 10px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #fff;
+      font-size: 11px;
+      color: var(--muted);
+      z-index: 10;
+    }
+    /* Consent layout follows the existing study. */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      background: #edf2f5;
+      z-index: 1000;
+    }
+    .modal-content {
+      width: 100%;
+      max-width: 880px;
+      max-height: calc(100vh - 48px);
+      max-height: calc(100dvh - 48px);
+      overflow-y: auto;
+      padding: 36px 48px 28px;
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--accent);
+      border-radius: 14px;
+      background: var(--paper);
+      box-shadow: 0 16px 56px rgba(29, 48, 70, 0.09);
+      scrollbar-color: #bdcbd4 transparent;
+      scrollbar-width: thin;
+    }
+    .modal-content h2 { text-align: left !important; margin-bottom: 26px !important; }
+    .consent-text { margin-bottom: 28px; line-height: 1.75; text-align: left; font-size: 15px; }
+    .consent-text p { margin: 0 0 18px; }
+    .consent-text p:first-child {
+      display: inline-block;
+      padding: 5px 10px;
+      margin-bottom: 24px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: var(--wash);
+      color: #536478;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+    .consent-buttons {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .consent-button { min-width: 164px; margin: 0; }
+    .disagree-button { background: #fff; border-color: #bbc8d2; color: #3e5368; }
+    .disagree-button:hover { background: var(--wash); border-color: #8c9eac; color: #243247; }
+    .modal-content > div:last-child p {
+      font-size: 12px !important;
+      line-height: 1.6;
+      color: var(--muted) !important;
+    }
+    .modal-content > div:last-child a { color: var(--accent) !important; }
+    @media (max-width: 600px) {
+      .jspsych-content-wrapper { padding: 20px 0; }
+      .jspsych-content { width: calc(100% - 28px); }
+      .jspsych-display-element { font-size: 16px; }
+      .modal-overlay { padding: 12px; }
+      .modal-content {
+        padding: 26px 22px 22px;
+        max-height: calc(100vh - 24px);
+        max-height: calc(100dvh - 24px);
+      }
+      .consent-button { flex: 1 1 150px; }
+      .keys { font-size: 16px; padding: 10px 16px; }
+    }
+    .jspsych-image-button-response-button .jspsych-btn { min-width: 140px; }
+    .attention-note {
+      padding: 16px 20px;
+      border-left: 3px solid var(--accent);
+      border-radius: 0 6px 6px 0;
+      background: var(--wash);
+    }
+    .response-guide { padding-left: 24px; }
+    .response-guide li { margin: 10px 0; }
+    /* Rating progress, without exposing trial counts. */
+    #jspsych-progressbar-container {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      padding: 12px 24px 16px;
+      margin: 0;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      font: 500 12px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      z-index: 20;
+    }
+    #jspsych-progressbar-outer {
+      width: min(560px, 100%);
+      height: 6px;
+      display: block;
+      margin: 0;
+      border: 0;
+      border-radius: 6px;
+      background: #e7edf1;
+      overflow: hidden;
+    }
+    #jspsych-progressbar-inner {
+      height: 100%;
+      border-radius: 6px;
+      background: var(--accent);
+      transition: none;
+    }
+  
+    #jspsych-image-button-response-stimulus {
+      max-height: 52vh;
+      max-width: min(85vw, 520px);
+      width: auto !important;
+      height: auto !important;
+    }
+    #jspsych-image-button-response-btngroup {
+      display: grid;
+      grid-template-columns: repeat(9, minmax(0, 1fr));
+      width: min(620px, 100%);
+      margin: 20px auto 0;
+      gap: 6px;
+    }
+    .jspsych-image-button-response-button .jspsych-btn {
+      min-width: 0;
+      width: 100%;
+      padding: 10px 0;
+      font-size: 18px;
+    }
+    .scale-anchors {
+      display: grid;
+      grid-template-columns: repeat(9, minmax(0, 1fr));
+      width: min(620px, 100%);
+      margin: 10px auto 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+      gap: 6px;
+    }
+    .anchor-low { grid-column: 1 / 4; text-align: left; }
+    .anchor-middle { grid-column: 4 / 7; text-align: center; }
+    .anchor-high { grid-column: 7 / 10; text-align: right; }
+    .rating-question { margin: 18px 0 0; font-size: 16px; }
+    .rating-active .jspsych-content-wrapper { padding-top: 80px; }
+    .rating-active .jspsych-content { max-width: 840px; }
+
+  </style>
+</head>
+<body><noscript>This study requires JavaScript. Please enable JavaScript and reopen the study.</noscript>
+<script>
+"use strict";
+
+// Face distinctiveness ratings, using the existing local jsPsych 7 library.
+// SETUP BEFORE RECRUITMENT:
+// 1. Create a SEPARATE DataPipe experiment and replace the ID below.
+//    Allow CSV. Change required fields from trial_type to rating (or clear them),
+//    because this study exports a compact CSV rather than all jsPsych fields.
+// 2. Paste SONA's client-side completion URL below. Leave survey_code=XXXX in it;
+//    the participant's sona_id is inserted automatically after successful saving.
+// 3. SONA Study URL: .../distinctiveness.html?sona_id=%SURVEY_CODE%
+//    See https://www.sona-systems.com/help/jspsych/
+// 4. Review the adapted consent against the approved protocol and SONA listing.
+// Local inspection: distinctiveness.html?preview=1 (no upload or credit redirect).
+// Preview runs the same 158-image task with the same timings and instructions.
+const DISTINCTIVENESS_CONFIG = Object.freeze({
+  version: "1.0.0",
+  gapMs: 500,
+  minimumSaveDisplayMs: 5000,
+  dataPipeExperimentId: "qqOBThwmASpM",
+  sonaCompletionUrl: "https://YOUR_SCHOOL.sona-systems.com/webstudy_credit.aspx?experiment_id=YOUR_EXPERIMENT_ID&credit_token=YOUR_CREDIT_TOKEN&survey_code=XXXX"
+});
+
+// Same global face numbers as recognition and similarity/MDS analyses.
+const FACE_IDS = [
+        "BF-001", "BF-002", "BF-003", "BF-004", "BF-005", "BF-006", "BF-007", "BF-008", "BF-009", "BF-010",
+        "BF-011", "BF-012", "BF-013", "BF-014", "BF-015", "BF-016", "BF-017", "BF-018", "BF-019", "BF-020",
+        "BF-021", "BF-022", "BF-023", "BF-024", "BF-025", "BF-026", "BF-027", "BF-028", "BF-029", "BF-030",
+        "BF-031", "BF-032", "BF-033", "BF-034", "BF-035", "BF-036", "BF-037", "BF-038", "BF-039", "BF-040",
+        "BF-041", "BF-042", "BF-043", "BF-044", "BF-045", "BF-046", "BF-047", "BF-048",
+        "BM-049", "BM-050", "BM-051", "BM-052", "BM-053", "BM-054", "BM-055", "BM-056", "BM-057", "BM-058",
+        "BM-059", "BM-060", "BM-061", "BM-062", "BM-063", "BM-064", "BM-065", "BM-066", "BM-067", "BM-068",
+        "BM-069", "BM-070", "BM-071", "BM-072", "BM-073", "BM-074", "BM-075", "BM-076", "BM-077", "BM-078",
+        "BM-079", "BM-080", "BM-081", "BM-082", "BM-083", "BM-084", "BM-085",
+        "WF-086", "WF-087", "WF-088", "WF-089", "WF-090", "WF-091", "WF-092", "WF-093", "WF-094", "WF-095",
+        "WF-096", "WF-097", "WF-098", "WF-099", "WF-100", "WF-101", "WF-102", "WF-103", "WF-104", "WF-105",
+        "WF-106", "WF-107", "WF-108", "WF-109", "WF-110", "WF-111", "WF-112", "WF-113", "WF-114", "WF-115",
+        "WF-116", "WF-117", "WF-118", "WF-119", "WF-120", "WF-121", "WF-122",
+        "WM-123", "WM-124", "WM-125", "WM-126", "WM-127", "WM-128", "WM-129", "WM-130", "WM-131", "WM-132",
+        "WM-133", "WM-134", "WM-135", "WM-136", "WM-137", "WM-138", "WM-139", "WM-140", "WM-141", "WM-142",
+        "WM-143", "WM-144", "WM-145", "WM-146", "WM-147", "WM-148", "WM-149", "WM-150", "WM-151", "WM-152",
+        "WM-153", "WM-154", "WM-155", "WM-156", "WM-157", "WM-158"
+];
+const CATEGORY_CODES = Object.freeze({ BF: 1, BM: 2, WF: 3, WM: 4 });
+
+function buildCompletionUrl(template, sonaId) {
+  const url = new URL(template);
+  if (url.protocol !== "https:") throw new Error("SONA completion URL must use HTTPS.");
+  url.searchParams.set("survey_code", sonaId);
+  return url.href;
+}
+
+function exportRatingsCSV(rows, sonaId, runId) {
+  const columns = ["sona_id", "run_id", "trial", "category", "face_id", "rating", "rt"];
+  const cell = value => {
+    const text = value == null ? "" : String(value);
+    return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+  };
+  const ratings = rows.filter(row => row.phase === "rating");
+  // Do not submit a partial or malformed session as a completed study.
+  if (ratings.length !== FACE_IDS.length || new Set(ratings.map(row => row.face_id)).size !== FACE_IDS.length) {
+    throw new Error("Incomplete rating data.");
+  }
+  if (ratings.some(row => !Number.isInteger(row.rating) || row.rating < 1 || row.rating > 9 || !Number.isFinite(row.rt) || row.rt < 0)) {
+    throw new Error("Invalid rating or reaction time.");
+  }
+  const output = [columns, ...ratings.map(row => [sonaId, runId, row.trial,
+    row.category, row.face_id, row.rating, row.rt])];
+  return output.map(row => row.map(cell).join(",")).join("\r\n") + "\r\n";
+}
+
+async function uploadRatingsCSV(experimentID, filename, csv) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 65000);
+  try {
+    const response = await fetch("https://pipe.jspsych.org/api/data/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ experimentID, filename, data: csv }),
+      signal: controller.signal
+    });
+    const result = await response.json();
+    if (!response.ok || result.error || ![201, 202].includes(response.status)) {
+      throw new Error(result.error || "HTTP " + response.status);
+    }
+    // 202 means DataPipe accepted the data and will retry storage itself.
+    // Never resubmit a queued upload. See https://pipe.jspsych.org/docs/api
+    return { status: response.status, queued: response.status === 202 };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function startDistinctivenessStudy() {
+  const config = DISTINCTIVENESS_CONFIG;
+  const params = new URLSearchParams(window.location.search);
+  const preview = params.get("preview") === "1";
+  const sonaId = (params.get("sona_id") || "").trim();
+  const runId = crypto.randomUUID();
+  let consented = false;
+  let saved = false;
+  let completionUrl = "";
+  const unconfigured = config.dataPipeExperimentId.startsWith("REPLACE_") ||
+    /YOUR_/.test(config.sonaCompletionUrl);
+  if (!preview && unconfigured) {
+    document.body.innerHTML = '<main class="page" style="max-width:840px;margin:48px auto;font-family:sans-serif"><h2>Study setup is not complete</h2><p>The researcher needs to configure data saving and the SONA return link before this study can begin.</p></main>';
+    console.error("Replace dataPipeExperimentId and sonaCompletionUrl in DISTINCTIVENESS_CONFIG. To inspect locally, add ?preview=1.");
+    return;
+  }
+  if (!preview && !/^\d{2,7}$/.test(sonaId)) {
+    document.body.innerHTML = '<main class="page" style="max-width:840px;margin:48px auto;font-family:sans-serif"><h2>Please open this study through SONA</h2><p>Return to your SONA study listing and use the study link provided there.</p></main>';
+    return;
+  }
+  if (!preview) completionUrl = buildCompletionUrl(config.sonaCompletionUrl, sonaId);
+  const beforeUnload = event => { event.preventDefault(); event.returnValue = ""; };
+  const jsPsych = initJsPsych({
+    use_webaudio: false,
+    show_progress_bar: true,
+    auto_update_progress_bar: false,
+    message_progress_bar: "Trial progress",
+    on_trial_start: trial => {
+      const rating = trial.data && trial.data.phase === "rating";
+      document.body.classList.toggle("rating-active", rating);
+      const bar = document.getElementById("jspsych-progressbar-container");
+      if (bar) bar.style.display = rating ? "flex" : "none";
+      if (rating) updateProgress(trial.data.trial - 1);
+    },
+    on_finish: () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+      if (consented && saved && !preview) window.location.assign(completionUrl);
+    }
+  });
+  function updateProgress(completed) {
+    jsPsych.setProgressBar(completed / FACE_IDS.length);
+    const track = document.getElementById("jspsych-progressbar-outer");
+    if (track) {
+      track.setAttribute("role", "progressbar");
+      track.setAttribute("aria-label", "Trial progress");
+      track.setAttribute("aria-valuemin", "0");
+      track.setAttribute("aria-valuemax", "100");
+      track.setAttribute("aria-valuenow", String(Math.round(100 * completed / FACE_IDS.length)));
+    }
+  }
+  // Shuffle all 158 images once per session; each appears exactly once.
+  // Saving the presentation order and run_id makes each session identifiable.
+  jsPsych.randomization.setSeed(runId);
+  const faces = jsPsych.randomization.shuffle(FACE_IDS).map((id, index) => ({
+    image_path: "faces/" + id + ".jpg",
+    category: CATEGORY_CODES[id.split("-")[0]],
+    face_id: Number(id.split("-")[1]),
+    trial: index + 1
+  }));
+  jsPsych.data.addProperties({
+    sona_id: sonaId,
+    run_id: runId,
+    experiment_version: config.version,
+    preview
+  });
+  if (preview) {
+    const label = document.createElement("div");
+    label.id = "preview-label";
+    label.textContent = "PREVIEW: no upload or SONA credit redirect";
+    document.body.appendChild(label);
+  }
+
+  const consent = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+            <div class="modal-overlay">
+                <div class="modal-content">
+                    <h2 style="text-align: center; margin-bottom: 20px;">Study Consent Form</h2>
+                    <div class="consent-text">
+                        <p><strong>Study IRB #: 21800</strong></p>
+                        <p><strong>You are being asked to participate in a research study.</strong> Scientists do research to answer important questions which might help change or improve the way we do things in the future. This form will give you information about the study to help you decide whether you want to participate.</p>
+                        <p><strong>All research is voluntary.</strong> You may choose not to take part in this study. If you decide to participate, you can change your mind later and leave the study at any time.</p>
+                        <p><strong>The purpose of this study</strong> is to understand how people process visual information.</p>
+                        <p>This study is being conducted by Dr. R.M. Nosofsky, Indiana University / Psychological and Brain Sciences.</p>
+                        <p><strong>If you agree to be in the study, you will do the following things.</strong> You will view facial images and provide ratings of them.</p>
+                        <p><strong>Before agreeing to participate, please consider the risks and potential benefits of taking part in this study.</strong> There are no known risks. There is a risk someone outside the study team could get access to your research information. We do not record your name or personal contact information.</p>
+                        <p>Information about participation credit is provided in the SONA study listing.</p>
+                        <p><strong>If you have questions about the study,</strong> contact Dr. R.M. Nosofsky at <a href="mailto:nosofsky@iu.edu">nosofsky@iu.edu</a>.</p>
+                        <p>For questions about your rights as a research participant, contact the IU Human Research Protection Program office at 800-696-2949 or irb@iu.edu.</p>
+                        <p><strong>Statement of Age of Participant and Consent:</strong> By clicking "I Agree" you indicate that you are at least 18 years of age, the research has been explained to you, your questions have been fully answered, and you freely and voluntarily choose to participate.</p>
+                    </div>
+                    <div class="consent-buttons">
+                        <button class="consent-button agree-button">I Agree</button>
+                        <button class="consent-button disagree-button">I Do Not Agree</button>
+                    </div>
+                    <div style="margin-top: 20px; text-align: center;">
+                        <p style="font-size: 9px; color: #666; margin: 0;">
+                            You can read about how we handle your data and protect your privacy
+                            <a href="https://noslab.lab.indiana.edu/privacy/" target="_blank" rel="noopener noreferrer" style="color: #666;">here</a>.
+                        </p>
+                    </div>
+                </div>
+            </div>`,
+    choices: ["Continue"],
+    button_html: '<button class="jspsych-btn" style="display:none">%choice%</button>',
+    data: { phase: "consent" },
+    on_load: () => {
+      const start = performance.now();
+      document.querySelector(".agree-button").addEventListener("click", () => {
+        document.querySelector(".jspsych-btn").click();
+      });
+      document.querySelector(".disagree-button").addEventListener("click", () => {
+        jsPsych.finishTrial({ response: 1, rt: performance.now() - start });
+      });
+    },
+    on_finish: data => { consented = data.response === 0; }
+  };
+  const instructions = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `<div class="page"><h2>Instructions</h2>
+      <p>Welcome to the experiment.</p>
+      <p>You will see faces from four groups: Black women, Black men, White women,
+      and White men. Faces from these groups will be mixed together and shown one at a time.</p>
+      <p>Please rate how distinctive each face looks. Imagine this person among other
+      people of the same race and gender. How much would their facial appearance help
+      them stand out? Give lower ratings to faces that would blend in, and higher
+      ratings to faces that would stand out.</p>
+      <p>Consider the face's overall appearance. A distinctive face does not need to
+      have a scar or another obvious unusual feature. Please judge distinctiveness
+      rather than attractiveness.</p>
+      <p>Use the scale from <strong>1 to 9</strong>:</p>
+      <ul class="response-guide">
+        <li><strong>1</strong>: Not at all distinctive.</li>
+        <li><strong>5</strong>: Moderately distinctive.</li>
+        <li><strong>9</strong>: Very distinctive.</li>
+      </ul>
+      <p>Use the same scale throughout the experiment. You may use any number that
+      best represents your impression. There is no correct rating; we are interested
+      in your own judgments.</p>
+      <p>Look carefully at each face, then click a number to submit your rating.
+      The face will remain on the screen until you respond.</p></div>`,
+    choices: ["Begin"],
+    data: { phase: "instructions" },
+    on_finish: () => window.addEventListener("beforeunload", beforeUnload)
+  };
+  const trials = faces.map(face => ({
+    type: jsPsychImageButtonResponse,
+    stimulus: face.image_path,
+    stimulus_height: 420,
+    render_on_canvas: false,
+    choices: ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+    button_html: '<button class="jspsych-btn" aria-label="Distinctiveness rating %choice%">%choice%</button>',
+    margin_horizontal: "0px",
+    margin_vertical: "0px",
+    response_ends_trial: true,
+    post_trial_gap: config.gapMs,
+    prompt: `<div class="scale-anchors">
+      <span class="anchor-low">1: Not at all distinctive</span>
+      <span class="anchor-middle">5: Moderately distinctive</span>
+      <span class="anchor-high">9: Very distinctive</span>
+      </div><p class="rating-question">How distinctive is this face?</p>`,
+    data: { ...face, phase: "rating" },
+    on_finish: data => {
+      data.rating = Number.isInteger(data.response) && data.response >= 0 && data.response <= 8
+        ? data.response + 1 : null; // jsPsych button indices are zero-based.
+      updateProgress(face.trial);
+    }
+  }));
+  const saveTrial = {
+    type: jsPsychCallFunction,
+    async: true,
+    data: { phase: "save" },
+    func: done => {
+      const display = jsPsych.getDisplayElement();
+      if (preview) {
+        display.innerHTML = '<h2>Preview complete</h2><p>No data were uploaded and no SONA credit will be granted.</p><button class="jspsych-btn" id="finish-preview">Next</button>';
+        display.querySelector("#finish-preview").onclick = () => done({ preview: true });
+        return;
+      }
+      const csv = exportRatingsCSV(jsPsych.data.get().values(), sonaId, runId);
+      // A fresh run_id prevents duplicate filenames when piloting with one ID.
+      // sona_id remains a separate column for matching participants in SONA.
+      const filename = `${sonaId}_${runId}.csv`;
+      let uploading = false;
+      const attempt = async () => {
+        if (uploading) return;
+        uploading = true;
+        display.innerHTML = '<h2>Saving your responses…</h2><p>Please keep this page open while we finish saving.</p>';
+        const minimumDisplay = new Promise(resolve => setTimeout(resolve, config.minimumSaveDisplayMs));
+        try {
+          const result = await uploadRatingsCSV(config.dataPipeExperimentId, filename, csv);
+          await minimumDisplay;
+          saved = true;
+          window.removeEventListener("beforeunload", beforeUnload);
+          done(result);
+        } catch (error) {
+          await minimumDisplay;
+          console.error("DataPipe upload could not be confirmed:", error);
+          display.innerHTML = '<h2>Please keep this page open</h2><p>We could not finish saving your responses. Please click Retry to try again.</p><p>If this continues, contact the researcher at <a href="mailto:nosofsky@iu.edu">nosofsky@iu.edu</a>. Please do not refresh or close this page.</p><button class="jspsych-btn" id="retry">Retry</button>';
+          display.querySelector("#retry").onclick = attempt;
+        } finally {
+          uploading = false;
+        }
+      };
+      attempt();
+    }
+  };
+  const thankYou = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: () => preview
+      ? '<h2>Thank you!</h2><p>Preview finished. You can close this page.</p>'
+      : '<h2>Thank you!</h2><p>Thank you for participating in the experiment.</p><p>Your responses have been received. Returning to SONA…</p>',
+    choices: "NO_KEYS",
+    trial_duration: preview ? null : 3000,
+    data: { phase: "completion" }
+  };
+  jsPsych.run([
+    consent,
+    {
+      conditional_function: () => consented,
+      timeline: [{
+        type: jsPsychPreload,
+        images: faces.map(face => face.image_path),
+        show_progress_bar: true,
+        continue_after_error: false,
+        max_load_time: 60000,
+        error_message: '<p>Some images could not load. Please check your connection and reload before starting. If this continues, contact the researcher at nosofsky@iu.edu.</p>',
+        data: { phase: "preload" }
+      }, {
+        type: jsPsychFullscreen,
+        fullscreen_mode: true,
+        message: '<p>Please switch to fullscreen for the study.</p>',
+        data: { phase: "fullscreen_enter" }
+      }, instructions, ...trials, saveTrial, {
+        type: jsPsychFullscreen,
+        fullscreen_mode: false,
+        data: { phase: "fullscreen_exit" }
+      }, thankYou]
+    }, {
+      conditional_function: () => !consented,
+      timeline: [{
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '<h2>You have not consented</h2><p>No ratings have been uploaded. You may close this page and return to SONA.</p>',
+        choices: "NO_KEYS",
+        data: { phase: "declined" }
+      }]
+    }
+  ]);
+}
+
+startDistinctivenessStudy();
+</script>
+</body>
+</html>
