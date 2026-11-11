@@ -323,9 +323,9 @@
 //    See https://www.sona-systems.com/help/jspsych/
 // 4. Review the adapted consent against the approved protocol and SONA listing.
 // Local inspection: experiment2.html?preview=1 (no upload or credit redirect).
-// Preview runs the same 158-image task with the same timings and instructions.
+// Preview runs the same assigned-group task with the same timings and instructions.
 const DISTINCTIVENESS_CONFIG = Object.freeze({
-  version: "1.0.0",
+  version: "1.1.0",
   gapMs: 500,
   minimumSaveDisplayMs: 5000,
   dataPipeExperimentId: "qqOBThwmASpM",
@@ -353,6 +353,17 @@ const FACE_IDS = [
         "WM-153", "WM-154", "WM-155", "WM-156", "WM-157", "WM-158"
 ];
 const CATEGORY_CODES = Object.freeze({ BF: 1, BM: 2, WF: 3, WM: 4 });
+const GROUP_LABELS = Object.freeze({
+  BF: "Black women", BM: "Black men", WF: "White women", WM: "White men"
+});
+
+async function assignDistinctivenessGroup(participantId) {
+  // Equal-probability assignment across participants, not exact recruitment quotas.
+  // Hashing the SONA ID keeps the assigned group stable across browsers and reloads.
+  const bytes = new TextEncoder().encode("distinctiveness-single-group-v1:" + participantId);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return ["BF", "BM", "WF", "WM"][new Uint8Array(digest)[0] % 4];
+}
 
 function buildCompletionUrl(template, sonaId) {
   const url = new URL(template);
@@ -361,16 +372,20 @@ function buildCompletionUrl(template, sonaId) {
   return url.href;
 }
 
-function exportRatingsCSV(rows, sonaId, runId) {
+function exportRatingsCSV(rows, sonaId, runId, expectedFaces) {
   const columns = ["sona_id", "run_id", "trial", "category", "face_id", "rating", "rt"];
   const cell = value => {
     const text = value == null ? "" : String(value);
     return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
   };
   const ratings = rows.filter(row => row.phase === "rating");
-  // Do not submit a partial or malformed session as a completed study.
-  if (ratings.length !== FACE_IDS.length || new Set(ratings.map(row => row.face_id)).size !== FACE_IDS.length) {
-    throw new Error("Incomplete rating data.");
+  // Validate the complete assigned group, rather than requiring all 158 faces.
+  const expected = new Map(expectedFaces.map(face => [face.face_id, face.category]));
+  if (expected.size === 0 || ratings.length !== expected.size ||
+      new Set(ratings.map(row => row.face_id)).size !== expected.size ||
+      ratings.some((row, index) => !expected.has(row.face_id) ||
+        expected.get(row.face_id) !== row.category || row.trial !== index + 1)) {
+    throw new Error("Incomplete or mismatched rating data.");
   }
   if (ratings.some(row => !Number.isInteger(row.rating) || row.rating < 1 || row.rating > 9 || !Number.isFinite(row.rt) || row.rt < 0)) {
     throw new Error("Invalid rating or reaction time.");
@@ -402,7 +417,7 @@ async function uploadRatingsCSV(experimentID, filename, csv) {
   }
 }
 
-function startDistinctivenessStudy() {
+async function startDistinctivenessStudy() {
   const config = DISTINCTIVENESS_CONFIG;
   const params = new URLSearchParams(window.location.search);
   const preview = params.get("preview") === "1";
@@ -426,6 +441,7 @@ function startDistinctivenessStudy() {
     return;
   }
   if (!preview && sonaCompletionConfigured) completionUrl = buildCompletionUrl(config.sonaCompletionUrl, sonaId);
+  const assignedGroup = await assignDistinctivenessGroup(sonaId || runId);
   const beforeUnload = event => { event.preventDefault(); event.returnValue = ""; };
   const jsPsych = initJsPsych({
     use_webaudio: false,
@@ -445,20 +461,21 @@ function startDistinctivenessStudy() {
     }
   });
   function updateProgress(completed) {
-    jsPsych.setProgressBar(completed / FACE_IDS.length);
+    jsPsych.setProgressBar(completed / faces.length);
     const track = document.getElementById("jspsych-progressbar-outer");
     if (track) {
       track.setAttribute("role", "progressbar");
       track.setAttribute("aria-label", "Trial progress");
       track.setAttribute("aria-valuemin", "0");
       track.setAttribute("aria-valuemax", "100");
-      track.setAttribute("aria-valuenow", String(Math.round(100 * completed / FACE_IDS.length)));
+      track.setAttribute("aria-valuenow", String(Math.round(100 * completed / faces.length)));
     }
   }
-  // Shuffle all 158 images once per session; each appears exactly once.
-  // Saving the presentation order and run_id makes each session identifiable.
+  // Load and shuffle only the assigned race-and-gender group.
+  // Every face in that group appears exactly once; order varies between runs.
+  const groupFaceIds = FACE_IDS.filter(id => id.startsWith(assignedGroup + "-"));
   jsPsych.randomization.setSeed(runId);
-  const faces = jsPsych.randomization.shuffle(FACE_IDS).map((id, index) => ({
+  const faces = jsPsych.randomization.shuffle(groupFaceIds).map((id, index) => ({
     image_path: "faces/" + id + ".jpg",
     category: CATEGORY_CODES[id.split("-")[0]],
     face_id: Number(id.split("-")[1]),
@@ -468,6 +485,7 @@ function startDistinctivenessStudy() {
     sona_id: sonaId,
     run_id: runId,
     experiment_version: config.version,
+    assigned_group: CATEGORY_CODES[assignedGroup],
     preview
   });
   if (preview) {
@@ -526,8 +544,7 @@ function startDistinctivenessStudy() {
     type: jsPsychHtmlButtonResponse,
     stimulus: `<div class="page"><h2>Instructions</h2>
       <p>Welcome to the experiment.</p>
-      <p>You will see faces from four groups: Black women, Black men, White women,
-      and White men. Faces from these groups will be mixed together and shown one at a time.</p>
+      <p>You will see faces of ${GROUP_LABELS[assignedGroup]}, shown one at a time.</p>
       <p>Please rate how distinctive each face looks. Imagine this person among other
       people of the same race and gender. How much would their facial appearance help
       them stand out? Give lower ratings to faces that would blend in, and higher
@@ -584,7 +601,7 @@ function startDistinctivenessStudy() {
         display.querySelector("#finish-preview").onclick = () => done({ preview: true });
         return;
       }
-      const csv = exportRatingsCSV(jsPsych.data.get().values(), sonaId, runId);
+      const csv = exportRatingsCSV(jsPsych.data.get().values(), sonaId, runId, faces);
       // Use eight random hexadecimal characters for a short session suffix.
       // Keep the full run_id and sona_id in separate CSV columns.
       const filenameSuffix = runId.replace(/-/g, "").slice(0, 8);
@@ -659,7 +676,10 @@ function startDistinctivenessStudy() {
   ]);
 }
 
-startDistinctivenessStudy();
+startDistinctivenessStudy().catch(error => {
+  console.error("The study could not start:", error);
+  document.body.innerHTML = '<main class="page" style="max-width:840px;margin:48px auto;font-family:sans-serif"><h2>The study could not start</h2><p>Please reload this page. If this continues, contact the researcher at nosofsky@iu.edu.</p></main>';
+});
 </script>
 </body>
 </html>
