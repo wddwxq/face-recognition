@@ -317,6 +317,8 @@
 //    because this study exports a compact CSV rather than all jsPsych fields.
 // 2. Paste SONA's client-side completion URL below. Leave survey_code=XXXX in it;
 //    the participant's sona_id is inserted automatically after successful saving.
+//    While this URL is a placeholder, the normal link still saves to DataPipe
+//    and ends on a SONA setup message. Direct visits receive a pilot session ID.
 // 3. SONA Study URL: .../experiment2.html?sona_id=%SURVEY_CODE%
 //    See https://www.sona-systems.com/help/jspsych/
 // 4. Review the adapted consent against the approved protocol and SONA listing.
@@ -404,23 +406,26 @@ function startDistinctivenessStudy() {
   const config = DISTINCTIVENESS_CONFIG;
   const params = new URLSearchParams(window.location.search);
   const preview = params.get("preview") === "1";
-  const sonaId = (params.get("sona_id") || "").trim();
+  const sonaCompletionConfigured = Boolean(config.sonaCompletionUrl) &&
+    !/YOUR_/.test(config.sonaCompletionUrl);
   const runId = crypto.randomUUID();
+  const sonaId = (params.get("sona_id") || "").trim() ||
+    (!sonaCompletionConfigured ? "pilot_" + runId.replace(/-/g, "").slice(0, 8) : "");
   let consented = false;
   let saved = false;
   let completionUrl = "";
-  const unconfigured = config.dataPipeExperimentId.startsWith("REPLACE_") ||
-    /YOUR_/.test(config.sonaCompletionUrl);
-  if (!preview && unconfigured) {
-    document.body.innerHTML = '<main class="page" style="max-width:840px;margin:48px auto;font-family:sans-serif"><h2>Study setup is not complete</h2><p>The researcher needs to configure data saving and the SONA return link before this study can begin.</p></main>';
-    console.error("Replace dataPipeExperimentId and sonaCompletionUrl in DISTINCTIVENESS_CONFIG. To inspect locally, add ?preview=1.");
+  const dataPipeUnconfigured = !config.dataPipeExperimentId ||
+    config.dataPipeExperimentId.startsWith("REPLACE_");
+  if (!preview && dataPipeUnconfigured) {
+    document.body.innerHTML = '<main class="page" style="max-width:840px;margin:48px auto;font-family:sans-serif"><h2>Study setup is not complete</h2><p>The researcher needs to configure data saving before this study can begin.</p></main>';
+    console.error("Replace dataPipeExperimentId in DISTINCTIVENESS_CONFIG. To inspect locally, add ?preview=1.");
     return;
   }
-  if (!preview && !/^\d{2,7}$/.test(sonaId)) {
+  if (!preview && sonaCompletionConfigured && !/^\d{2,7}$/.test(sonaId)) {
     document.body.innerHTML = '<main class="page" style="max-width:840px;margin:48px auto;font-family:sans-serif"><h2>Please open this study through SONA</h2><p>Return to your SONA study listing and use the study link provided there.</p></main>';
     return;
   }
-  if (!preview) completionUrl = buildCompletionUrl(config.sonaCompletionUrl, sonaId);
+  if (!preview && sonaCompletionConfigured) completionUrl = buildCompletionUrl(config.sonaCompletionUrl, sonaId);
   const beforeUnload = event => { event.preventDefault(); event.returnValue = ""; };
   const jsPsych = initJsPsych({
     use_webaudio: false,
@@ -436,7 +441,7 @@ function startDistinctivenessStudy() {
     },
     on_finish: () => {
       window.removeEventListener("beforeunload", beforeUnload);
-      if (consented && saved && !preview) window.location.assign(completionUrl);
+      if (consented && saved && !preview && completionUrl) window.location.assign(completionUrl);
     }
   });
   function updateProgress(completed) {
@@ -612,9 +617,12 @@ function startDistinctivenessStudy() {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: () => preview
       ? '<h2>Thank you!</h2><p>Preview finished. You can close this page.</p>'
-      : '<h2>Thank you!</h2><p>Thank you for participating in the experiment.</p><p>Your responses have been received. Returning to SONA…</p>',
+      : '<h2>Thank you!</h2><p>Thank you for participating in the experiment.</p><p>Your responses have been received.</p>' +
+        (sonaCompletionConfigured
+          ? '<p>Returning to SONA…</p>'
+          : '<p>The SONA redirect is still being set up. You can close this page.</p>'),
     choices: "NO_KEYS",
-    trial_duration: preview ? null : 3000,
+    trial_duration: preview || !sonaCompletionConfigured ? null : 3000,
     data: { phase: "completion" }
   };
   jsPsych.run([
