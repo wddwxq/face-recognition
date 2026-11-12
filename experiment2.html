@@ -12,6 +12,7 @@
   <script src="jspsych/dist/plugin-preload.js"></script>
   <script src="jspsych/dist/plugin-fullscreen.js"></script>
   <script src="jspsych/dist/plugin-call-function.js"></script>
+  <script src="jspsych/dist/plugin-survey-html-form.js"></script>
   <style>
     :root {
       --ink: #243247;
@@ -312,24 +313,22 @@
 
 // Face distinctiveness ratings, using the existing local jsPsych 7 library.
 // SETUP BEFORE RECRUITMENT:
-// 1. Create a SEPARATE DataPipe experiment and replace the ID below.
-//    Allow CSV. Change required fields from trial_type to rating (or clear them),
-//    because this study exports a compact CSV rather than all jsPsych fields.
-// 2. Paste SONA's client-side completion URL below. Leave survey_code=XXXX in it;
-//    the participant's sona_id is inserted automatically after successful saving.
-//    While this URL is a placeholder, the normal link still saves to DataPipe
-//    and ends on a SONA setup message. Direct visits receive a pilot session ID.
-// 3. SONA Study URL: .../experiment2.html?sona_id=%SURVEY_CODE%
-//    See https://www.sona-systems.com/help/jspsych/
-// 4. Review the adapted consent against the approved protocol and SONA listing.
-// Local inspection: experiment2.html?preview=1 (no upload or credit redirect).
-// Preview runs the same assigned-group task with the same timings and instructions.
+// 1. DataPipe experiment qqOBThwmASpM stores these ratings. Allow CSV and use
+//    rating as the required field (or clear required fields), not trial_type.
+// 2. Replace completionUrl with this distinctiveness study's Prolific completion
+//    URL. Until configured, the normal link saves data and ends on a thank-you page.
+// 3. Prolific Study URL:
+//    .../experiment2.html?PROLIFIC_PID={{%PROLIFIC_PID%}}&STUDY_ID={{%STUDY_ID%}}&SESSION_ID={{%SESSION_ID%}}
+//    The Prolific ID is read automatically; direct visits ask for it after consent.
+// 4. Review the consent and payment information against the Prolific listing.
+// Local inspection: experiment2.html?preview=1 (no upload or completion redirect).
+// Every participant rates all 158 faces once in a mixed, shuffled order.
 const DISTINCTIVENESS_CONFIG = Object.freeze({
-  version: "1.1.0",
+  version: "2.0.0",
   gapMs: 500,
   minimumSaveDisplayMs: 5000,
   dataPipeExperimentId: "qqOBThwmASpM",
-  sonaCompletionUrl: "https://YOUR_SCHOOL.sona-systems.com/webstudy_credit.aspx?experiment_id=YOUR_EXPERIMENT_ID&credit_token=YOUR_CREDIT_TOKEN&survey_code=XXXX"
+  completionUrl: "https://app.prolific.com/submissions/complete?cc=C1GSBSUS"
 });
 
 // Same global face numbers as recognition and similarity/MDS analyses.
@@ -353,33 +352,14 @@ const FACE_IDS = [
         "WM-153", "WM-154", "WM-155", "WM-156", "WM-157", "WM-158"
 ];
 const CATEGORY_CODES = Object.freeze({ BF: 1, BM: 2, WF: 3, WM: 4 });
-const GROUP_LABELS = Object.freeze({
-  BF: "Black female", BM: "Black male", WF: "White female", WM: "White male"
-});
-
-async function assignDistinctivenessGroup(participantId) {
-  // Equal-probability assignment across participants, not exact recruitment quotas.
-  // Hashing the SONA ID keeps the assigned group stable across browsers and reloads.
-  const bytes = new TextEncoder().encode("distinctiveness-single-group-v1:" + participantId);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return ["BF", "BM", "WF", "WM"][new Uint8Array(digest)[0] % 4];
-}
-
-function buildCompletionUrl(template, sonaId) {
-  const url = new URL(template);
-  if (url.protocol !== "https:") throw new Error("SONA completion URL must use HTTPS.");
-  url.searchParams.set("survey_code", sonaId);
-  return url.href;
-}
-
-function exportRatingsCSV(rows, sonaId, expectedFaces) {
-  const columns = ["sona_id", "trial", "category", "face_id", "rating", "rt"];
+function exportRatingsCSV(rows, prolificId, expectedFaces) {
+  const columns = ["prolific_id", "trial", "category", "face_id", "rating", "rt"];
   const cell = value => {
     const text = value == null ? "" : String(value);
     return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
   };
   const ratings = rows.filter(row => row.phase === "rating");
-  // Validate the complete assigned group, rather than requiring all 158 faces.
+  // Validate that every face in the full 158-face set was rated exactly once.
   const expected = new Map(expectedFaces.map(face => [face.face_id, face.category]));
   if (expected.size === 0 || ratings.length !== expected.size ||
       new Set(ratings.map(row => row.face_id)).size !== expected.size ||
@@ -390,7 +370,7 @@ function exportRatingsCSV(rows, sonaId, expectedFaces) {
   if (ratings.some(row => !Number.isInteger(row.rating) || row.rating < 1 || row.rating > 9 || !Number.isFinite(row.rt) || row.rt < 0)) {
     throw new Error("Invalid rating or reaction time.");
   }
-  const output = [columns, ...ratings.map(row => [sonaId, row.trial,
+  const output = [columns, ...ratings.map(row => [prolificId, row.trial,
     row.category, row.face_id, row.rating, row.rt])];
   return output.map(row => row.map(cell).join(",")).join("\r\n") + "\r\n";
 }
@@ -421,14 +401,19 @@ async function startDistinctivenessStudy() {
   const config = DISTINCTIVENESS_CONFIG;
   const params = new URLSearchParams(window.location.search);
   const preview = params.get("preview") === "1";
-  const sonaCompletionConfigured = Boolean(config.sonaCompletionUrl) &&
-    !/YOUR_/.test(config.sonaCompletionUrl);
+  const completionConfigured = Boolean(config.completionUrl) &&
+    !/REPLACE_/.test(config.completionUrl);
   const runId = crypto.randomUUID();
-  const sonaId = (params.get("sona_id") || "").trim() ||
-    (!sonaCompletionConfigured ? "pilot_" + runId.replace(/-/g, "").slice(0, 8) : "");
+  let prolificId = (params.get("PROLIFIC_PID") || "").trim();
+  if (preview && !prolificId) prolificId = "preview";
   let consented = false;
   let saved = false;
   let completionUrl = "";
+  if (completionConfigured) {
+    const url = new URL(config.completionUrl);
+    if (url.protocol !== "https:") throw new Error("Prolific completion URL must use HTTPS.");
+    completionUrl = url.href;
+  }
   const dataPipeUnconfigured = !config.dataPipeExperimentId ||
     config.dataPipeExperimentId.startsWith("REPLACE_");
   if (!preview && dataPipeUnconfigured) {
@@ -436,12 +421,6 @@ async function startDistinctivenessStudy() {
     console.error("Replace dataPipeExperimentId in DISTINCTIVENESS_CONFIG. To inspect locally, add ?preview=1.");
     return;
   }
-  if (!preview && sonaCompletionConfigured && !/^\d{2,7}$/.test(sonaId)) {
-    document.body.innerHTML = '<main class="page" style="max-width:840px;margin:48px auto;font-family:sans-serif"><h2>Please open this study through SONA</h2><p>Return to your SONA study listing and use the study link provided there.</p></main>';
-    return;
-  }
-  if (!preview && sonaCompletionConfigured) completionUrl = buildCompletionUrl(config.sonaCompletionUrl, sonaId);
-  const assignedGroup = await assignDistinctivenessGroup(sonaId || runId);
   const beforeUnload = event => { event.preventDefault(); event.returnValue = ""; };
   const jsPsych = initJsPsych({
     use_webaudio: false,
@@ -471,26 +450,26 @@ async function startDistinctivenessStudy() {
       track.setAttribute("aria-valuenow", String(Math.round(100 * completed / faces.length)));
     }
   }
-  // Load and shuffle only the assigned race-and-gender group.
-  // Every face in that group appears exactly once; order varies between runs.
-  const groupFaceIds = FACE_IDS.filter(id => id.startsWith(assignedGroup + "-"));
+  // Mix all four categories. Every one of the 158 faces appears exactly once;
+  // order is shuffled independently for each session.
   jsPsych.randomization.setSeed(runId);
-  const faces = jsPsych.randomization.shuffle(groupFaceIds).map((id, index) => ({
+  const faces = jsPsych.randomization.shuffle(FACE_IDS.slice()).map((id, index) => ({
     image_path: "faces/" + id + ".jpg",
     category: CATEGORY_CODES[id.split("-")[0]],
     face_id: Number(id.split("-")[1]),
     trial: index + 1
   }));
   jsPsych.data.addProperties({
-    sona_id: sonaId,
+    prolific_id: prolificId,
     experiment_version: config.version,
-    assigned_group: CATEGORY_CODES[assignedGroup],
+    prolific_study_id: params.get("STUDY_ID") || "",
+    prolific_session_id: params.get("SESSION_ID") || "",
     preview
   });
   if (preview) {
     const label = document.createElement("div");
     label.id = "preview-label";
-    label.textContent = "PREVIEW: no upload or SONA credit redirect";
+    label.textContent = "PREVIEW: no upload or Prolific completion redirect";
     document.body.appendChild(label);
   }
 
@@ -508,7 +487,7 @@ async function startDistinctivenessStudy() {
                         <p>This study is being conducted by Dr. R.M. Nosofsky, Indiana University / Psychological and Brain Sciences.</p>
                         <p><strong>If you agree to be in the study, you will do the following things.</strong> You will view facial images and provide ratings of them.</p>
                         <p><strong>Before agreeing to participate, please consider the risks and potential benefits of taking part in this study.</strong> There are no known risks. There is a risk someone outside the study team could get access to your research information. We do not record your name or personal contact information.</p>
-                        <p>Information about participation credit is provided in the SONA study listing.</p>
+                        <p>Payment information is provided in the Prolific study listing.</p>
                         <p><strong>If you have questions about the study,</strong> contact Dr. R.M. Nosofsky at <a href="mailto:nosofsky@iu.edu">nosofsky@iu.edu</a>.</p>
                         <p>For questions about your rights as a research participant, contact the IU Human Research Protection Program office at 800-696-2949 or irb@iu.edu.</p>
                         <p><strong>Statement of Age of Participant and Consent:</strong> By clicking "I Agree" you indicate that you are at least 18 years of age, the research has been explained to you, your questions have been fully answered, and you freely and voluntarily choose to participate.</p>
@@ -539,11 +518,24 @@ async function startDistinctivenessStudy() {
     },
     on_finish: data => { consented = data.response === 0; }
   };
+  const idEntry = {
+    timeline: [{
+      type: jsPsychSurveyHtmlForm,
+      preamble: "<h2>Prolific ID</h2><p>Please enter your 24-character Prolific ID.</p>",
+      html: '<p><input name="prolific_id" aria-label="Prolific ID" required pattern="[a-fA-F0-9]{24}" maxlength="24"></p>',
+      data: { phase: "participant_id" },
+      on_finish: data => {
+        prolificId = data.response.prolific_id.trim();
+        jsPsych.data.addProperties({ prolific_id: prolificId });
+      }
+    }],
+    conditional_function: () => !preview && !/^[a-fA-F0-9]{24}$/.test(prolificId)
+  };
   const instructions = {
     type: jsPsychHtmlButtonResponse,
     stimulus: `<div class="page"><h2>Instructions</h2>
       <p>Welcome to the experiment.</p>
-      <p>In this experiment, you will see ${GROUP_LABELS[assignedGroup]} faces, shown one at a time.</p>
+      <p>In this experiment, you will see faces from four groups: Black female, Black male, White female, and White male. Faces from these groups will be mixed together and shown one at a time.</p>
       <p>Please rate the extent to which each face contains a highly distinctive feature
       that distinguishes it from other faces in the set. For example, a face with a
       highly prominent scar would have a highly distinctive feature.</p>
@@ -593,15 +585,15 @@ async function startDistinctivenessStudy() {
     func: done => {
       const display = jsPsych.getDisplayElement();
       if (preview) {
-        display.innerHTML = '<h2>Preview complete</h2><p>No data were uploaded and no SONA credit will be granted.</p><button class="jspsych-btn" id="finish-preview">Next</button>';
+        display.innerHTML = '<h2>Preview complete</h2><p>No data were uploaded and no Prolific completion redirect will occur.</p><button class="jspsych-btn" id="finish-preview">Next</button>';
         display.querySelector("#finish-preview").onclick = () => done({ preview: true });
         return;
       }
-      const csv = exportRatingsCSV(jsPsych.data.get().values(), sonaId, faces);
+      const csv = exportRatingsCSV(jsPsych.data.get().values(), prolificId, faces);
       // Use eight random hexadecimal characters for a short session suffix.
-      // Keep sona_id in the CSV; the session suffix is used only in the filename.
+      // Keep prolific_id in the CSV; the session suffix is used only in the filename.
       const filenameSuffix = runId.replace(/-/g, "").slice(0, 8);
-      const filename = `${sonaId}_${filenameSuffix}.csv`;
+      const filename = `${prolificId}_${filenameSuffix}.csv`;
       let uploading = false;
       const attempt = async () => {
         if (uploading) return;
@@ -631,23 +623,23 @@ async function startDistinctivenessStudy() {
     stimulus: () => preview
       ? '<h2>Thank you!</h2><p>Preview finished. You can close this page.</p>'
       : '<h2>Thank you!</h2><p>Thank you for participating in the experiment.</p><p>Your responses have been received.</p>' +
-        (sonaCompletionConfigured
-          ? '<p>Returning to SONA…</p>'
-          : '<p>The SONA redirect is still being set up. You can close this page.</p>'),
+        (completionConfigured
+          ? '<p>Returning to Prolific…</p>'
+          : '<p>The Prolific redirect is still being set up. You can close this page.</p>'),
     choices: "NO_KEYS",
-    trial_duration: preview || !sonaCompletionConfigured ? null : 3000,
+    trial_duration: preview || !completionConfigured ? null : 3000,
     data: { phase: "completion" }
   };
   jsPsych.run([
     consent,
     {
       conditional_function: () => consented,
-      timeline: [{
+      timeline: [idEntry, {
         type: jsPsychPreload,
         images: faces.map(face => face.image_path),
         show_progress_bar: true,
         continue_after_error: false,
-        max_load_time: 60000,
+        max_load_time: 120000,
         error_message: '<p>Some images could not load. Please check your connection and reload before starting. If this continues, contact the researcher at nosofsky@iu.edu.</p>',
         data: { phase: "preload" }
       }, {
@@ -664,7 +656,7 @@ async function startDistinctivenessStudy() {
       conditional_function: () => !consented,
       timeline: [{
         type: jsPsychHtmlKeyboardResponse,
-        stimulus: '<h2>You have not consented</h2><p>No ratings have been uploaded. You may close this page and return to SONA.</p>',
+        stimulus: '<h2>You have not consented</h2><p>No ratings have been uploaded. You may close this page and return the study in Prolific.</p>',
         choices: "NO_KEYS",
         data: { phase: "declined" }
       }]
