@@ -372,8 +372,8 @@ function buildCompletionUrl(template, sonaId) {
   return url.href;
 }
 
-function exportRatingsCSV(rows, sonaId, runId, expectedFaces) {
-  const columns = ["sona_id", "run_id", "trial", "category", "face_id", "rating", "rt"];
+function exportRatingsCSV(rows, sonaId, expectedFaces) {
+  const columns = ["sona_id", "trial", "category", "face_id", "rating", "rt"];
   const cell = value => {
     const text = value == null ? "" : String(value);
     return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
@@ -390,7 +390,7 @@ function exportRatingsCSV(rows, sonaId, runId, expectedFaces) {
   if (ratings.some(row => !Number.isInteger(row.rating) || row.rating < 1 || row.rating > 9 || !Number.isFinite(row.rt) || row.rt < 0)) {
     throw new Error("Invalid rating or reaction time.");
   }
-  const output = [columns, ...ratings.map(row => [sonaId, runId, row.trial,
+  const output = [columns, ...ratings.map(row => [sonaId, row.trial,
     row.category, row.face_id, row.rating, row.rt])];
   return output.map(row => row.map(cell).join(",")).join("\r\n") + "\r\n";
 }
@@ -483,7 +483,6 @@ async function startDistinctivenessStudy() {
   }));
   jsPsych.data.addProperties({
     sona_id: sonaId,
-    run_id: runId,
     experiment_version: config.version,
     assigned_group: CATEGORY_CODES[assignedGroup],
     preview
@@ -576,10 +575,10 @@ async function startDistinctivenessStudy() {
     response_ends_trial: true,
     post_trial_gap: config.gapMs,
     prompt: `<div class="scale-anchors">
-      <span class="anchor-low">1: Not at all distinctive</span>
-      <span class="anchor-middle">5: Moderately distinctive</span>
-      <span class="anchor-high">9: Very distinctive</span>
-      </div><p class="rating-question">How distinctive is this face?</p>`,
+      <span class="anchor-low">1: No distinctive features</span>
+      <span class="anchor-middle">5: Moderately distinctive features</span>
+      <span class="anchor-high">9: Highly distinctive features</span>
+      </div><p class="rating-question">To what extent does this face contain a distinctive feature?</p>`,
     data: { ...face, phase: "rating" },
     on_finish: data => {
       data.rating = Number.isInteger(data.response) && data.response >= 0 && data.response <= 8
@@ -598,9 +597,9 @@ async function startDistinctivenessStudy() {
         display.querySelector("#finish-preview").onclick = () => done({ preview: true });
         return;
       }
-      const csv = exportRatingsCSV(jsPsych.data.get().values(), sonaId, runId, faces);
+      const csv = exportRatingsCSV(jsPsych.data.get().values(), sonaId, faces);
       // Use eight random hexadecimal characters for a short session suffix.
-      // Keep the full run_id and sona_id in separate CSV columns.
+      // Keep sona_id in the CSV; the session suffix is used only in the filename.
       const filenameSuffix = runId.replace(/-/g, "").slice(0, 8);
       const filename = `${sonaId}_${filenameSuffix}.csv`;
       let uploading = false;
