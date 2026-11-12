@@ -544,25 +544,22 @@ async function startDistinctivenessStudy() {
     type: jsPsychHtmlButtonResponse,
     stimulus: `<div class="page"><h2>Instructions</h2>
       <p>Welcome to the experiment.</p>
-      <p>You will see faces of ${GROUP_LABELS[assignedGroup]}, shown one at a time.</p>
-      <p>Please rate how distinctive each face looks. Imagine this person among other
-      people of the same race and gender. How much would their facial appearance help
-      them stand out? Give lower ratings to faces that would blend in, and higher
-      ratings to faces that would stand out.</p>
-      <p>Consider the face's overall appearance. A distinctive face does not need to
-      have a scar or another obvious unusual feature. Please judge distinctiveness
-      rather than attractiveness.</p>
+      <p>In this experiment, you will see faces of ${GROUP_LABELS[assignedGroup]}, shown one at a time.</p>
+      <p>Please rate the extent to which each face contains a highly distinctive feature
+      that distinguishes it from other faces in the set. For example, a face with a
+      highly prominent scar would have a highly distinctive feature.</p>
+      <p>This example is only a reference. A distinctive feature does not need to be a
+      scar or a large mustache. Please note that a feature should be judged as
+      “distinctive” only if it rarely occurs. If many faces contain that same feature,
+      then it should not be judged as distinctive.</p>
       <p>Use the scale from <strong>1 to 9</strong>:</p>
       <ul class="response-guide">
-        <li><strong>1</strong>: Not at all distinctive.</li>
-        <li><strong>5</strong>: Moderately distinctive.</li>
-        <li><strong>9</strong>: Very distinctive.</li>
+        <li>Faces that do not contain any distinctive features should receive ratings of <strong>1 or 2</strong>.</li>
+        <li>Faces that contain moderately distinctive features should receive ratings of <strong>4, 5, or 6</strong>.</li>
+        <li>Faces that contain highly distinctive features should receive ratings of <strong>8 or 9</strong>.</li>
       </ul>
-      <p>Use the same scale throughout the experiment. You may use any number that
-      best represents your impression. There is no correct rating; we are interested
-      in your own judgments.</p>
-      <p>Look carefully at each face, then click a number to submit your rating.
-      The face will remain on the screen until you respond.</p></div>`,
+      <p>Use the same scale throughout the experiment. There is no correct rating;
+      we are interested in your own judgments.</p></div>`,
     choices: ["Begin"],
     data: { phase: "instructions" },
     on_finish: () => window.addEventListener("beforeunload", beforeUnload)
