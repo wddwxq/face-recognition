@@ -354,7 +354,7 @@ const FACE_IDS = [
 ];
 const CATEGORY_CODES = Object.freeze({ BF: 1, BM: 2, WF: 3, WM: 4 });
 const GROUP_LABELS = Object.freeze({
-  BF: "Black women", BM: "Black men", WF: "White women", WM: "White men"
+  BF: "Black female", BM: "Black male", WF: "White female", WM: "White male"
 });
 
 async function assignDistinctivenessGroup(participantId) {
@@ -544,7 +544,7 @@ async function startDistinctivenessStudy() {
     type: jsPsychHtmlButtonResponse,
     stimulus: `<div class="page"><h2>Instructions</h2>
       <p>Welcome to the experiment.</p>
-      <p>In this experiment, you will see faces of ${GROUP_LABELS[assignedGroup]}, shown one at a time.</p>
+      <p>In this experiment, you will see ${GROUP_LABELS[assignedGroup]} faces, shown one at a time.</p>
       <p>Please rate the extent to which each face contains a highly distinctive feature
       that distinguishes it from other faces in the set. For example, a face with a
       highly prominent scar would have a highly distinctive feature.</p>
