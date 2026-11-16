@@ -590,10 +590,7 @@ async function startDistinctivenessStudy() {
         return;
       }
       const csv = exportRatingsCSV(jsPsych.data.get().values(), prolificId, faces);
-      // Use eight random hexadecimal characters for a short session suffix.
-      // Keep prolific_id in the CSV; the session suffix is used only in the filename.
-      const filenameSuffix = runId.replace(/-/g, "").slice(0, 8);
-      const filename = `${prolificId}_${filenameSuffix}.csv`;
+      const filename = `${prolificId}.csv`;
       let uploading = false;
       const attempt = async () => {
         if (uploading) return;
